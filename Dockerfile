@@ -12,7 +12,7 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /code
 
 # Install Firefox, geckodriver, and required dependencies
-RUN apt-get update && apt-get install -y firefox-esr
+RUN apt-get update && apt-get install -y firefox-esr postgresql-client
 
 # Install dependencies
 COPY ./requirements.txt .

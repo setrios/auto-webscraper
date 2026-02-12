@@ -18,6 +18,7 @@ class ListCrawler():
         self.list_view_href = href
         self.page_num = int(re.search(r'page=([0-9]+)', href).group(1))
         self.hrefs = []
+        self.page_was_full = True
 
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
@@ -35,7 +36,11 @@ class ListCrawler():
 
         relative_hrefs = [tag['href'] for tag in tags]
         absolute_hrefs = ['https://auto.ria.com' + rh for rh in relative_hrefs]
-        self.hrefs += absolute_hrefs
+        if absolute_hrefs:
+            self.hrefs += absolute_hrefs
+            self.page_was_full = True
+        else:
+            self.page_was_full = False
 
     def go_to_next_page(self):
         self.page_num += 1
@@ -44,8 +49,8 @@ class ListCrawler():
 
         self.list_view_href = self.list_view_href[:-len(page_num_str)] + str(self.page_num)
 
-    def get_all_hrefs(self, stop):
-        while stop > self.page_num:
+    def get_all_hrefs(self, pages_to_scrap):
+        while self.page_was_full and pages_to_scrap > self.page_num + 1:  # +1 as start with page 0
             self.get_all_hrefs_on_page()
             self.go_to_next_page()
 

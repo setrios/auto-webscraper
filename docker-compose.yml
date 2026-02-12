@@ -3,10 +3,10 @@ services:
     build: .  
     ports: 
       - "8000:8000"
-    command: 
-      python src/main.py
+    command: python src/main.py
     volumes: 
       - .:/code 
+      - dumps_data:/code/dumps  # for dumps
     depends_on:  # ensure the database container starts before the web container
       - db
      
@@ -34,3 +34,4 @@ services:
 volumes:
   postgres_data_scrap:
   pgadmin_data:
+  dumps_data:

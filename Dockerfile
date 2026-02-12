@@ -11,6 +11,9 @@ ENV PYTHONUNBUFFERED 1
 # Set work directory | just to use relative path
 WORKDIR /code
 
+# Install Firefox, geckodriver, and required dependencies
+RUN apt-get update && apt-get install -y firefox-esr
+
 # Install dependencies
 COPY ./requirements.txt .
 RUN pip install -r requirements.txt

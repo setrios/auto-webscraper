@@ -25,7 +25,7 @@ class ListCrawler():
         ctx.verify_mode = ssl.CERT_NONE
         self.ctx = ctx
 
-    def get_all_hrefs_on_page(self):
+    def __get_all_hrefs_on_page(self):
         print(f'Retrieving: {self.list_view_href}')
 
         html = urllib.request.urlopen(self.list_view_href, context=self.ctx).read()
@@ -42,7 +42,7 @@ class ListCrawler():
         else:
             self.page_was_full = False
 
-    def go_to_next_page(self):
+    def __go_to_next_page(self):
         self.page_num += 1
 
         page_num_str = str(self.page_num)
@@ -56,8 +56,8 @@ class ListCrawler():
             if not scrape_all and self.page_num >= pages_to_scrap:
                 break
             
-            self.get_all_hrefs_on_page()
-            self.go_to_next_page()
+            self.__get_all_hrefs_on_page()
+            self.__go_to_next_page()
         
         return self.hrefs
 
@@ -85,14 +85,14 @@ class DetailCrawler():
 
         try:
             for href in self.hrefs:
-                self.get_info_from_page(href)
+                self.__get_info_from_page(href)
         finally:
             if self.driver:
                 self.driver.quit()
 
         return self.cars
 
-    def get_info_from_page(self, href):
+    def __get_info_from_page(self, href):
         print(f'Getting info of: {href}')
 
         html = urllib.request.urlopen(href, context=self.ctx).read()
@@ -100,15 +100,15 @@ class DetailCrawler():
         
         car_data = {
             'url': href,
-            'title': self.get_title(soup),
-            'price_usd': self.get_price_usd(soup),
-            'odometer': self.get_odometer(soup),
-            'username': self.get_username(soup),
-            'phone_number': self.get_phone_number(href),
-            'image_url': self.get_first_image_url(soup),
-            'images_count': self.get_images_count(soup),
-            'car_number': self.get_car_number(soup),
-            'car_vin': self.get_car_vin(soup)
+            'title': self.__get_title(soup),
+            'price_usd': self.__get_price_usd(soup),
+            'odometer': self.__get_odometer(soup),
+            'username': self.__get_username(soup),
+            'phone_number': self.__get_phone_number(href),
+            'image_url': self.__get_first_image_url(soup),
+            'images_count': self.__get_images_count(soup),
+            'car_number': self.__get_car_number(soup),
+            'car_vin': self.__get_car_vin(soup)
         }
         
         car = CarListing(**car_data)  # validate
@@ -116,35 +116,35 @@ class DetailCrawler():
         self.cars.append(car)
     
         
-    def get_title(self, soup):
+    def __get_title(self, soup):
         title_div = soup.find('div', id='sideTitleTitle')
         if title_div and title_div.span:
             return title_div.span.text
         
         return None
     
-    def get_price_usd(self, soup):
+    def __get_price_usd(self, soup):
         price_div = soup.find('div', id='sidePrice')
         if price_div and price_div.strong:
             return price_div.strong.text
         
         return None
     
-    def get_odometer(self, soup):
+    def __get_odometer(self, soup):
         odometer_div = soup.find('div', id='basicInfoTableMainInfo0')
         if odometer_div and odometer_div.span:
             return odometer_div.span.text
         
         return None
     
-    def get_username(self, soup):
+    def __get_username(self, soup):
         username_div = soup.find('div', id='sellerInfoUserName')
         if username_div and username_div.span:
             return username_div.span.text
         
         return None
     
-    def get_images_count(self, soup):
+    def __get_images_count(self, soup):
         photo_slider = soup.find('div', id='photoSlider')
         if photo_slider:
             badge = photo_slider.find('span', class_='common-badge')
@@ -155,21 +155,21 @@ class DetailCrawler():
                 
         return None
     
-    def get_car_number(self, soup):
+    def __get_car_number(self, soup):
         car_number_div = soup.find('div', class_='car-number')
         if car_number_div and car_number_div.span:
             return car_number_div.span.text
         
         return None
     
-    def get_car_vin(self, soup):
+    def __get_car_vin(self, soup):
         vin_span = soup.find('span', id='badgesVin')
         if vin_span and vin_span.span:
             return vin_span.span.text
         
         return None
     
-    def get_first_image_url(self, soup):
+    def __get_first_image_url(self, soup):
         active_slide = soup.find('li', class_='carousel__slide--active')
         
         if active_slide:
@@ -180,7 +180,7 @@ class DetailCrawler():
         
         return None
 
-    def get_phone_number(self, url):
+    def __get_phone_number(self, url):
         try:
             self.driver.get(url)
 

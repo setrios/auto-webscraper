@@ -50,10 +50,15 @@ class ListCrawler():
         self.list_view_href = self.list_view_href[:-len(page_num_str)] + str(self.page_num)
 
     def get_all_hrefs(self, pages_to_scrap):
-        while self.page_was_full and pages_to_scrap > self.page_num + 1:  # +1 as start with page 0
+        scrape_all = pages_to_scrap < 0
+        
+        while self.page_was_full:
+            if not scrape_all and self.page_num >= pages_to_scrap:
+                break
+            
             self.get_all_hrefs_on_page()
             self.go_to_next_page()
-
+        
         return self.hrefs
 
 
@@ -73,6 +78,8 @@ class DetailCrawler():
         firefox_options.add_argument('--headless')
         firefox_options.set_preference('dom.webdriver.enabled', False)
         firefox_options.set_preference('useAutomationExtension', False)
+        firefox_options.add_argument('--width=1920')  # for phone button to be in a viewport
+        firefox_options.add_argument('--height=1080') # for phone button to be in a viewport
 
         self.driver = webdriver.Firefox(options=firefox_options)
 
@@ -163,29 +170,21 @@ class DetailCrawler():
         return None
     
     def get_first_image_url(self, soup):
-        # try to find the active slide
         active_slide = soup.find('li', class_='carousel__slide--active')
         
         if active_slide:
             img = active_slide.find('img')
             if img:
-                # Try src first, then data-src as fallback
+                # src first, data-src as fallback
                 return img.get('src') or img.get('data-src') or ''
-        
-        # find first carousel slide with an actual image
-        all_slides = soup.find_all('li', class_='carousel__slide')
-        for slide in all_slides:
-            img = slide.find('img')
-            if img:
-                src = img.get('src') or img.get('data-src')
-                if src and src.startswith('http'):  # Make sure it's a valid URL
-                    return src
         
         return None
 
     def get_phone_number(self, url):
         try:
             self.driver.get(url)
+
+            # self.driver.save_screenshot('debug_after_load.png')
             
             wait = WebDriverWait(self.driver, 0.1)
             

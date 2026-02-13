@@ -24,4 +24,4 @@ class Advertisement(Base):
     datetime_found = Column(DateTime, default=datetime.now)
     
     def __repr__(self):
-        return f"<Advertisement(id={self.id}, title='{self.title}', price=${self.price_usd})>"
+        return f"Advertisement(id={self.id}, title='{self.title}', price=${self.price_usd})"

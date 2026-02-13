@@ -6,6 +6,7 @@ from pydantic_models import CarListing
 from typing import List
 
 
+
 def create_tables():
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
@@ -26,22 +27,6 @@ def pydantic_to_sqlalchemy(car):
         car_vin=car.car_vin,
         datetime_found=car.datetime_found
     )
-
-
-def insert_car(db, car):
-
-    db_car = pydantic_to_sqlalchemy(car)
-    
-    try:
-        db.add(db_car)
-        db.commit()
-        db.refresh(db_car)
-        print(f'Inserted: {car.title}')
-        return db_car
-    except IntegrityError:
-        db.rollback()
-        print(f'Duplicate URL skipped: {car.url}')
-        return None
 
 
 def insert_cars_bulk(db, cars):
@@ -69,9 +54,3 @@ def get_all_cars(db):
 
 def get_car_by_url(db, url):
     return db.query(Advertisement).filter(Advertisement.url == url).first()
-
-
-def delete_all_cars(db):
-    db.query(Advertisement).delete()
-    db.commit()
-    print('All records deleted')

@@ -11,6 +11,8 @@ from selenium.webdriver.firefox.options import Options
 
 from pydantic_models import CarListing
 
+from concurrent.futures import ThreadPoolExecutor
+
 
 
 class ListCrawler():
@@ -84,8 +86,8 @@ class DetailCrawler():
         self.driver = webdriver.Firefox(options=firefox_options)
 
         try:
-            for href in self.hrefs:
-                self.get_info_from_page(href)
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                executor.map(self.get_info_from_page, self.hrefs)  # processes 5 at a time
         finally:
             if self.driver:
                 self.driver.quit()

@@ -2,6 +2,8 @@ import urllib.request, urllib.parse, urllib.error
 from bs4 import BeautifulSoup
 import ssl
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -10,8 +12,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.firefox.options import Options
 
 from pydantic_models import CarListing
-
-from concurrent.futures import ThreadPoolExecutor
 
 
 
@@ -66,32 +66,50 @@ class ListCrawler():
 
 
 class DetailCrawler():
-    def __init__(self, hrefs):
+    def __init__(self, hrefs, max_workers=5):
         self.hrefs = hrefs
         self.cars = []
+        self.max_workers = max_workers
+        
+        # thread-local storage for WebDriver instances
+        self.thread_local = threading.local()
+        
+        # lock for thread-safe list operations
+        self.lock = threading.Lock()
 
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         self.ctx = ctx
 
+    def get_driver(self):
+        if not hasattr(self.thread_local, 'driver'):
+            firefox_options = Options()
+            firefox_options.add_argument('--headless')
+            firefox_options.set_preference('dom.webdriver.enabled', False)
+            firefox_options.set_preference('useAutomationExtension', False)
+            firefox_options.add_argument('--width=1920')
+            firefox_options.add_argument('--height=1080')
+            
+            self.thread_local.driver = webdriver.Firefox(options=firefox_options)
+            print(f'[Thread {threading.current_thread().name}] Created new WebDriver')
+        
+        return self.thread_local.driver
+    
+    def close_driver(self):
+        if hasattr(self.thread_local, 'driver'):
+            self.thread_local.driver.quit()
+            print(f'[Thread {threading.current_thread().name}] Closed WebDriver')
+
     def get_all_info(self):
-        firefox_options = Options()
-        firefox_options.add_argument('--headless')
-        firefox_options.set_preference('dom.webdriver.enabled', False)
-        firefox_options.set_preference('useAutomationExtension', False)
-        firefox_options.add_argument('--width=1920')  # for phone button to be in a viewport
-        firefox_options.add_argument('--height=1080') # for phone button to be in a viewport
-
-        self.driver = webdriver.Firefox(options=firefox_options)
-
         try:
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                executor.map(self.get_info_from_page, self.hrefs)  # processes 5 at a time
+            # Use ThreadPoolExecutor for parallel scraping
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                executor.map(self.get_info_from_page, self.hrefs)
         finally:
-            if self.driver:
-                self.driver.quit()
-
+            # Clean up all thread-local drivers
+            self.close_driver()
+        
         return self.cars
 
     def get_info_from_page(self, href):
@@ -115,7 +133,10 @@ class DetailCrawler():
         
         car = CarListing(**car_data)  # validate
         print(car)
-        self.cars.append(car)
+        
+        # thread-safe append
+        with self.lock:
+            self.cars.append(car)
     
         
     def get_title(self, soup):
@@ -184,11 +205,12 @@ class DetailCrawler():
 
     def get_phone_number(self, url):
         try:
-            self.driver.get(url)
+            driver = self.get_driver()  # get thread-local driver
+            driver.get(url)
 
-            # self.driver.save_screenshot('debug_after_load.png')
+            # driver.save_screenshot('debug_after_load.png')
             
-            wait = WebDriverWait(self.driver, 0.1)
+            wait = WebDriverWait(driver, 0.1)
             
             phone_button = wait.until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.conversion[data-action="showBottomPopUp"]'))
